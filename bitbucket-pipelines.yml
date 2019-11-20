@@ -1,0 +1,50 @@
+# This is a sample build configuration for .NET Core.
+# Check our guides at https://confluence.atlassian.com/x/5Q4SMw for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image: microsoft/dotnet:sdk
+
+pipelines:
+  default:
+    - step:
+        name: .NET Core build & test
+        image: microsoft/dotnet:2-sdk    
+        caches:
+          - dotnetcore
+        script: # Modify the comma`nds below to build your repository.
+          - export PROJECT_NAME=./src/XXX/Api.csproj
+          - export TEST_NAME=Api.Tests
+          - dotnet restore
+          - dotnet build $PROJECT_NAME
+          #- dotnet test $TEST_NAME
+    - step:
+        name: Publish, zip & send FTP
+        deployment: production
+        script:
+          # variables zip
+          - export DIR_ZIP=/XXX/zip/
+          - export DIR_RELEASE=/XXX/published/
+          - export ZIP_NAME=XXX.zip
+          # variables ftp
+          - export FTP_USER=XXX
+          - export FTP_PWD=XXX
+          - export FTP_SERVER=XXX
+          - export FTP_REMOTE_PATH=/XXX
+          # publish
+          - dotnet publish -c Release -o published
+          # get zip
+          - apt-get update
+          - apt-get install zip -y
+          # new dir
+          - mkdir $DIR_ZIP
+          # create zip
+          - zip -r $DIR_ZIP$ZIP_NAME $DIR_RELEASE
+          # send ftp
+          - pipe: atlassian/ftp-deploy:0.2.2
+            variables:
+              USER: $FTP_USER
+              PASSWORD: $FTP_PWD
+              SERVER: $FTP_SERVER
+              REMOTE_PATH: $FTP_REMOTE_PATH
+              LOCAL_PATH: $DIR_ZIP
