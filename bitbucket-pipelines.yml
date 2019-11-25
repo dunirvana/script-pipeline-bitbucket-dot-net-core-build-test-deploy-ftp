@@ -19,19 +19,40 @@ pipelines:
           - dotnet build $PROJECT_NAME
           #- dotnet test $TEST_NAME
     - step:
-        name: Publish, zip & send FTP
-        deployment: production
+        name: Publish on FTP (were api is running)
+        deployment: test
         script:
-          # variables zip
-          - export DIR_ZIP=/XXX/zip/
+          # variables
           - export DIR_RELEASE=/XXX/published/
-          - export ZIP_NAME=XXX.zip
           # variables ftp
           - export FTP_USER=XXX
           - export FTP_PWD=XXX
-          - export FTP_SERVER=XXX
+          - export FTP_SERVER=ftp://XXX
           - export FTP_REMOTE_PATH=/XXX
-          # publish
+          # create release
+          - dotnet publish -c Release -o published
+          # send ftp
+          - pipe: atlassian/ftp-deploy:0.2.2
+            variables:
+              USER: $FTP_USER
+              PASSWORD: $FTP_PWD
+              SERVER: $FTP_SERVER
+              REMOTE_PATH: $FTP_REMOTE_PATH
+              LOCAL_PATH: $DIR_RELEASE          
+    - step:
+        name: Zip & send FTP (backup)
+        deployment: production
+        script:
+          # variables zip
+          - export DIR_ZIP=/XXX/published/zip/
+          - export DIR_RELEASE=/XXX/published/
+          - export ZIP_NAME=UltimaVersao.zip
+          # variables ftp
+          - export FTP_USER=XXX
+          - export FTP_PWD=XXX
+          - export FTP_SERVER=ftp://XXX
+          - export FTP_REMOTE_PATH=/XXX
+          # create release
           - dotnet publish -c Release -o published
           # get zip
           - apt-get update
